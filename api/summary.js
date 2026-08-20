@@ -1,6 +1,8 @@
 import { SUMMARY_SYSTEM_PROMPT } from '../lib/systemPrompts.js';
 import { callAI, safeParseJSON } from '../lib/apiUtils.js';
 
+const FENCE = '```';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método no permitido' });
@@ -13,28 +15,37 @@ export default async function handler(req, res) {
   }
 
   // El conteo de pistas lo calcula el frontend contando preguntas reales
-  // del tutor, no se lo pedimos al modelo que lo cuente. Pedirle a un
-  // LLM que cuente turnos de su propia conversación es una fuente
-  // clásica de errores; es mucho más confiable contarlo en código.
-  const safeHintsUsed = Number.isFinite(hintsUsed) ? hintsUsed : history.filter((t) => t.role === 'assistant').length;
+  // del tutor, no se lo pedimos al modelo. Pedirle a un LLM que cuente
+  // turnos de su propia conversación es una fuente clásica de errores;
+  // es mucho más confiable contarlo en código.
+  const safeHintsUsed = Number.isFinite(hintsUsed)
+    ? hintsUsed
+    : history.filter((t) => t.role === 'assistant').length;
 
   const transcript = history
     .map((turn) => `${turn.role === 'assistant' ? 'Tutor' : 'Estudiante'}: ${turn.content}`)
     .join('\n');
 
-  const userContent = `Código original (${language || 'javascript'}):
-```
-${code || ''}
-```
+  const notaResolucion =
+    resolutionNote && resolutionNote.trim()
+      ? `Nota del estudiante sobre cómo lo resolvió: ${resolutionNote.trim()}`
+      : 'El estudiante no dejó una nota sobre cómo lo resolvió.';
 
-Problema descrito por el estudiante: ${problemDescription || ''}
-
-Cantidad de pistas (preguntas del tutor) que necesitó: ${safeHintsUsed}
-
-Conversación completa:
-${transcript}
-
-${resolutionNote && resolutionNote.trim() ? ``Nota del estudiante sobre cómo lo resolvió: ${resolutionNote.trim()}`` : 'El estudiante no dejó una nota sobre cómo lo resolvió.'}`;
+  const userContent = [
+    `Código original (${language || 'javascript'}):`,
+    FENCE,
+    code || '',
+    FENCE,
+    '',
+    `Problema descrito por el estudiante: ${problemDescription || ''}`,
+    '',
+    `Cantidad de pistas (preguntas del tutor) que necesitó: ${safeHintsUsed}`,
+    '',
+    'Conversación completa:',
+    transcript,
+    '',
+    notaResolucion,
+  ].join('\n');
 
   try {
     const rawText = await callAI({

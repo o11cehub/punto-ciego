@@ -1,6 +1,11 @@
 import { TUTOR_SYSTEM_PROMPT } from '../lib/systemPrompts.js';
 import { callAI, safeParseJSON } from '../lib/apiUtils.js';
 
+// La cerca de markdown en una constante: adentro de comillas simples
+// los backticks son texto común, mientras que sueltos dentro de un
+// template literal lo cerrarían antes de tiempo.
+const FENCE = '```';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método no permitido' });
@@ -12,7 +17,8 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Falta el código o la descripción del problema.' });
   }
 
-  const initialUserMessage = `Código (${language || 'javascript'}):\n```\n${code}\n```\n\nQué está pasando: ${problemDescription}`;
+  const initialUserMessage =
+    `Código (${language || 'javascript'}):\n${FENCE}\n${code}\n${FENCE}\n\nQué está pasando: ${problemDescription}`;
 
   // Filtramos la historia por si llega algo mal formado desde el
   // cliente. No confiamos ciegamente en lo que manda el frontend.
