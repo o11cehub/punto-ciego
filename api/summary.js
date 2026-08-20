@@ -1,5 +1,5 @@
 import { SUMMARY_SYSTEM_PROMPT } from '../lib/systemPrompts.js';
-import { callAI, safeParseJSON } from '../lib/apiUtils.js';
+import { callAI, safeParseJSON, SUMMARY_SCHEMA } from '../lib/apiUtils.js';
 
 const FENCE = '```';
 
@@ -15,9 +15,8 @@ export default async function handler(req, res) {
   }
 
   // El conteo de pistas lo calcula el frontend contando preguntas reales
-  // del tutor, no se lo pedimos al modelo. Pedirle a un LLM que cuente
-  // turnos de su propia conversación es una fuente clásica de errores;
-  // es mucho más confiable contarlo en código.
+  // del tutor. Pedirle a un LLM que cuente turnos de su propia
+  // conversación es una fuente clásica de errores.
   const safeHintsUsed = Number.isFinite(hintsUsed)
     ? hintsUsed
     : history.filter((t) => t.role === 'assistant').length;
@@ -51,19 +50,26 @@ export default async function handler(req, res) {
     const rawText = await callAI({
       system: SUMMARY_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userContent }],
-      maxTokens: 700,
+      schema: SUMMARY_SCHEMA,
+      maxTokens: 2000,
     });
 
     const parsed = safeParseJSON(rawText);
 
     if (!parsed || typeof parsed.blindSpotTitle !== 'string' || !parsed.blindSpotTitle.trim()) {
       console.error('Respuesta sin formato esperado:', rawText);
-      return res.status(502).json({ error: 'La IA respondió en un formato inesperado. Probá de nuevo.' });
+      return res.status(502).json({
+        error: 'La IA respondió en un formato inesperado. Probá de nuevo.',
+        detalle: String(rawText).slice(0, 300),
+      });
     }
 
     return res.status(200).json(parsed);
   } catch (err) {
     console.error('Error en /api/summary:', err);
-    return res.status(502).json({ error: 'Error al generar el resumen. Probá de nuevo en unos segundos.' });
+    return res.status(502).json({
+      error: 'Error al generar el resumen. Probá de nuevo en unos segundos.',
+      detalle: String(err.message).slice(0, 300),
+    });
   }
 }
