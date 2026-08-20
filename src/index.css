@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+/* Tailwind v4 define el tema en CSS, no en un tailwind.config.js.
+   Cada variable de acá abajo genera automáticamente sus clases de
+   utilidad: --color-brass da bg-brass, text-brass, border-brass, etc. */
+@theme {
+  --color-ink: #1b1815;   /* fondo — negro cálido, no el gris frío de siempre */
+  --color-ink2: #252019;  /* superficie (inputs, tarjetas) */
+  --color-paper: #ede6da; /* texto principal — blanco hueso, no blanco puro */
+  --color-fog: #8a8072;   /* texto secundario, bordes */
+  --color-brass: #c68b3e; /* acento principal — el tutor, el foco */
+  --color-rust: #a8583d;  /* acento secundario — la voz del estudiante */
+
+  --font-display: "Fraunces", serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+}
+
+body {
+  @apply bg-ink text-paper font-sans antialiased;
+}
+
+::selection {
+  @apply bg-brass/30 text-paper;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
